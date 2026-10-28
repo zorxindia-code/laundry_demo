@@ -5,7 +5,6 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { ServicesList } from "@/components/sections/ServicesList";
 import { Proof } from "@/components/sections/Proof";
 import { FinalCta } from "@/components/sections/FinalCta";
-console.log("dsagd");
 
 export default function Home() {
   return (
