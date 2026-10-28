@@ -1,0 +1,534 @@
+@import "tailwindcss";
+
+/* ── Tokens (creative direction §D) ───────────────────────────────────── */
+@theme {
+  --color-canvas: #eef9f8; /* pale aqua, between #F2FBFB and #E6F8F7 */
+  --color-canvas-deep: #e6f8f7;
+  --color-ink: #062e3d; /* deep teal */
+  --color-water: #72e5f2; /* light aqua */
+  --color-mint: #69f9b7; /* cleanliness signal */
+  --color-teal: #5cdbc5; /* process accent: thread, numbers */
+  --color-teal-ink: #0d7468; /* teal darkened for small text (4.8:1 on canvas) */
+  --color-signal: #699ff9; /* links and focus only */
+  --color-paper: #ffffff;
+
+  --ease-thread: cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+@theme inline {
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter-tight), system-ui, sans-serif;
+}
+
+@property --bob {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --sway {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  background: var(--color-canvas);
+  font-family: var(--font-inter-tight), system-ui, sans-serif;
+  overflow-x: clip; /* clip, not hidden: keeps position: sticky working */
+}
+
+/* Paper grain over everything, about 3%: makes the hex read as a space. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--color-water);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-signal);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Marks text the client still has to confirm (see src/content/site.ts). */
+.placeholder {
+  text-decoration: underline dashed 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
+
+.tag {
+  font-family: var(--font-inter-tight), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ── Header (colours are retimed inside the drum by the story) ────────── */
+.site-header {
+  --hdr-ink: var(--color-ink);
+  --hdr-cta-bg: var(--color-ink);
+  --hdr-cta-ink: var(--color-paper);
+  color: var(--hdr-ink);
+}
+
+.cta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.8rem 1.4rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  transition:
+    background-color 0.25s var(--ease-thread),
+    color 0.25s var(--ease-thread),
+    transform 0.15s;
+}
+.cta-pill:hover {
+  background: var(--color-mint);
+  color: var(--color-ink);
+}
+.cta-pill:active {
+  transform: scale(0.97);
+}
+.site-header .cta-pill:not(:hover) {
+  background: var(--hdr-cta-bg);
+  color: var(--hdr-cta-ink);
+}
+
+.text-link {
+  text-decoration: underline 1px;
+  text-decoration-color: var(--color-water);
+  text-underline-offset: 0.3em;
+  transition: text-decoration-color 0.2s;
+}
+.text-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── Story stage ──────────────────────────────────────────────────────── */
+/*
+ * The master timeline drives these unitless variables; every layer composes
+ * its transform from them in container units, so the shirt, porthole clip
+ * and floor shadow stay locked together at any viewport size.
+ */
+.story-stage {
+  container-type: size;
+  --shirt-w: min(53.4cqh, 92cqw);
+  --machine-w: min(78cqw, 95cqh);
+  --glass-r: calc(var(--machine-w) * 0.1614);
+
+  /* shirt: offset from centre (cqw / cqh), rotation, Y-rotation, scale */
+  --s-x: 8;
+  --s-y: -2;
+  --s-r: 6;
+  --s-ry: 0;
+  --s-s: 1;
+  --s-pend: 0;
+  --float: 1;
+  --shadow-o: 0.55;
+  /* machine: offset, scale; drum interior opacity and rotation */
+  --m-x: 0;
+  --m-y: 110;
+  --m-s: 1;
+  --drum-o: 0;
+  --drum-r: 0;
+  /* raking light and steam press progress, 0 → 1 */
+  --rake: 0;
+  --press: 0;
+  --wash-stain: 1;
+
+  background-color: var(--color-canvas);
+}
+@media (max-width: 1023px) {
+  .story-stage {
+    --shirt-w: min(48cqh, 92cqw);
+    --machine-w: min(118cqw, 66cqh);
+    --s-x: 0;
+    --s-y: -9;
+  }
+}
+
+.stage-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Shirt */
+.shirt-rig {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--shirt-w);
+  aspect-ratio: 818 / 782;
+  transform: translate(-50%, -50%) translate(calc(var(--s-x) * 1cqw), calc(var(--s-y) * 1cqh))
+    perspective(1400px) rotateY(calc(var(--s-ry) * 1deg)) rotate(calc(var(--s-r) * 1deg))
+    scale(var(--s-s));
+  will-change: transform;
+}
+.shirt-pendulum {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 8%;
+  transform: rotate(calc(var(--s-pend) * 1deg));
+}
+.shirt-float {
+  position: absolute;
+  inset: 0;
+  transform: translateY(calc(var(--bob) * var(--float))) rotate(calc(var(--sway) * var(--float)));
+  animation: breathe 6s ease-in-out infinite alternate;
+}
+@keyframes breathe {
+  0% {
+    --bob: -8px;
+    --sway: -1.5deg;
+  }
+  100% {
+    --bob: 8px;
+    --sway: 1.5deg;
+  }
+}
+.shirt-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.shirt-clean {
+  transform: translateX(1.1%) scale(1.073);
+}
+.wash-stains {
+  opacity: var(--wash-stain);
+}
+
+/* Raking light: a bright band clipped to the shirt's own silhouette. */
+.shirt-rake {
+  -webkit-mask: url("/images/story/derived/dirty-shirt-base.png") center / 100% 100% no-repeat;
+  mask: url("/images/story/derived/dirty-shirt-base.png") center / 100% 100% no-repeat;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 38%,
+    rgb(255 255 255 / 0.75) 50%,
+    transparent 62%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-position: calc(100% - var(--rake) * 100%) 0;
+  mix-blend-mode: soft-light;
+}
+
+/* The clean shirt arrives damp; the steam pass wipes this layer away. */
+.shirt-damp {
+  filter: brightness(0.84) saturate(0.7) contrast(0.92) sepia(0.12) blur(0.4px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--press) * 130% - 30%),
+    #000 calc(var(--press) * 130%)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--press) * 130% - 30%),
+    #000 calc(var(--press) * 130%)
+  );
+}
+.steam-band {
+  position: absolute;
+  left: -35%;
+  right: -35%;
+  height: 30%;
+  top: calc(var(--press) * 130% - 30%);
+  background:
+    radial-gradient(40% 50% at 28% 55%, rgb(255 255 255 / 1), transparent 70%),
+    radial-gradient(35% 45% at 64% 42%, rgb(255 255 255 / 0.95), transparent 70%),
+    radial-gradient(70% 38% at 50% 50%, rgb(255 255 255 / 0.9), transparent 75%),
+    radial-gradient(80% 60% at 50% 60%, rgb(6 46 61 / 0.08), transparent 80%);
+  filter: blur(10px);
+}
+
+/* Floor contact shadow: light from the upper left, so it falls down-right. */
+.floor-shadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--shirt-w) * 0.62);
+  height: calc(var(--shirt-w) * 0.07);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(6 46 61 / 0.28), transparent);
+  filter: blur(6px);
+  opacity: var(--shadow-o);
+  transform: translate(-50%, -50%)
+    translate(calc(var(--s-x) * 1cqw + 3cqw), calc(var(--s-y) * 1cqh + var(--shirt-w) * 0.62));
+}
+
+/* Machine: positioned so the porthole centre sits at stage centre; the
+   transform origin is the porthole, so scaling pushes "through the glass". */
+.machine-rig {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--machine-w);
+  aspect-ratio: 818 / 782;
+  margin-left: calc(var(--machine-w) * -0.5844);
+  margin-top: calc(var(--machine-w) * 0.956 * -0.4552);
+  transform-origin: 58.44% 45.52%;
+  transform: translate(calc(var(--m-x) * 1cqw), calc(var(--m-y) * 1cqh)) scale(var(--m-s));
+  will-change: transform;
+}
+/* The front copy shows only the rim and body, so the shirt sits behind glass. */
+.machine-front {
+  -webkit-mask-image: radial-gradient(
+    circle var(--glass-r) at 58.44% 45.52%,
+    transparent 97%,
+    #000 100%
+  );
+  mask-image: radial-gradient(circle var(--glass-r) at 58.44% 45.52%, transparent 97%, #000 100%);
+}
+.glass-sheen {
+  position: absolute;
+  left: 58.44%;
+  top: 45.52%;
+  width: calc(var(--glass-r) * 2);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(60% 40% at 32% 22%, rgb(255 255 255 / 0.4), transparent 70%),
+    radial-gradient(circle at 50% 50%, transparent 55%, rgb(114 229 242 / 0.18) 85%, rgb(6 46 61 / 0.2));
+}
+
+/* Drum interior: a circle locked to the porthole, filling the screen as the
+   camera pushes in. */
+.drum {
+  clip-path: circle(
+    calc(var(--glass-r) * var(--m-s)) at calc(50% + var(--m-x) * 1cqw) calc(50% + var(--m-y) * 1cqh)
+  );
+  opacity: var(--drum-o);
+}
+.drum-base {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    #0f5566 0%,
+    #0a4152 38%,
+    var(--color-ink) 75%
+  );
+}
+.drum-spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 160vmax;
+  height: 160vmax;
+  transform: translate(-50%, -50%) rotate(calc(var(--drum-r) * 1deg));
+}
+.drum-perforations {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background: radial-gradient(circle, rgb(114 229 242 / 0.5) 1.4px, transparent 2.2px) 0 0 / 26px 26px;
+  -webkit-mask-image: radial-gradient(circle, transparent 18%, #000 32%, #000 60%, transparent 72%);
+  mask-image: radial-gradient(circle, transparent 18%, #000 32%, #000 60%, transparent 72%);
+}
+/* The machine's own water, enlarged and softened into a moving plate. */
+.drum-water {
+  position: absolute;
+  inset: 0;
+  /* Kept low so the drum stays deep teal and the white garment carries. */
+  opacity: 0.3;
+  mix-blend-mode: screen;
+  filter: blur(6px) saturate(1.2);
+  background-image: url("/images/story/washing-machine.png");
+  background-repeat: no-repeat;
+  /* porthole (0.3228 of image width) spans 50% of the plate */
+  background-size: calc(160vmax * 0.5 / 0.3228) auto;
+  background-position: calc(80vmax - 160vmax * 0.5 / 0.3228 * 0.5844)
+    calc(80vmax - 160vmax * 0.5 / 0.3228 * 0.956 * 0.4552);
+}
+.drum-caustics {
+  position: absolute;
+  inset: -10%;
+  mix-blend-mode: screen;
+  opacity: 0.2;
+  background:
+    radial-gradient(18% 10% at 30% 40%, rgb(114 229 242 / 0.6), transparent 70%),
+    radial-gradient(14% 9% at 65% 30%, rgb(114 229 242 / 0.5), transparent 70%),
+    radial-gradient(20% 12% at 55% 70%, rgb(105 249 183 / 0.25), transparent 70%),
+    radial-gradient(12% 8% at 25% 75%, rgb(114 229 242 / 0.45), transparent 70%);
+  background-size: 140% 140%;
+}
+
+
+/* Giant editorial words */
+.giant-word {
+  position: absolute;
+  top: 50%;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 600;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  line-height: 0.8;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  font-size: 21cqw;
+  translate: 0 -50%;
+}
+@media (max-width: 1023px) {
+  .giant-word {
+    font-size: 28cqw;
+  }
+}
+/* Positions live here, not in utilities: these rules are unlayered and win. */
+.giant-dirty {
+  top: 42%;
+  left: 5cqw;
+}
+.giant-fresh {
+  top: 34%;
+  right: 5cqw;
+}
+@media (max-width: 1023px) {
+  .giant-dirty,
+  .giant-fresh {
+    top: 41%;
+    left: 0;
+    right: 0;
+    text-align: center;
+  }
+}
+/* DIRTY: deep teal carrying a grimy, uneven texture. */
+.giant-dirty {
+  color: var(--color-ink);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.035' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .42  0 0 0 0 .33  0 0 0 0 .2  0 0 0 2.4 -1.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    var(--color-ink);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.giant-clean {
+  color: rgb(114 229 242 / 0.16);
+}
+.giant-fresh {
+  color: var(--color-ink);
+}
+
+.callout-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Scene copy */
+.copy-tag {
+  color: var(--color-teal-ink);
+}
+.copy-body {
+  color: color-mix(in srgb, var(--color-ink) 82%, transparent);
+}
+.copy-on-dark {
+  color: var(--color-paper);
+}
+.copy-on-dark .copy-tag {
+  color: var(--color-water);
+}
+.copy-on-dark .copy-body {
+  color: rgb(255 255 255 / 0.85);
+}
+/* No drum in reduced motion, so the wash copy stays on the pale canvas. */
+@media (prefers-reduced-motion: reduce) {
+  .copy-on-dark {
+    color: var(--color-ink);
+  }
+  .copy-on-dark .copy-tag {
+    color: var(--color-teal-ink);
+  }
+  .copy-on-dark .copy-body {
+    color: color-mix(in srgb, var(--color-ink) 82%, transparent);
+  }
+}
+
+/* Progress thread */
+.thread-track {
+  background: color-mix(in srgb, var(--color-teal) 35%, transparent);
+}
+.thread-fill {
+  background: var(--color-teal);
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+/* Before hydration only scene 01 is visible, so there is no flash. */
+.js [data-story-hidden] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Without JavaScript the film can't run: show the story as plain text. */
+html:not(.js) .story-section {
+  height: auto !important;
+}
+html:not(.js) .story-stage {
+  position: relative !important;
+  height: auto !important;
+  min-height: 100svh;
+  container-type: normal;
+}
+html:not(.js) .story-visual-only {
+  display: none;
+}
+html:not(.js) .story-copy {
+  position: static !important;
+  transform: none !important;
+  margin: 3rem auto;
+  max-width: 34rem;
+  padding-inline: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shirt-float,
+  .final-float {
+    animation: none;
+  }
+}
+
+.final-float {
+  animation: final-float 7s ease-in-out infinite alternate;
+}
+@keyframes final-float {
+  from {
+    transform: translateY(-6px) rotate(-0.8deg);
+  }
+  to {
+    transform: translateY(6px) rotate(0.8deg);
+  }
+}
